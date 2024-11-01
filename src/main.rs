@@ -1,7 +1,8 @@
 use actix_otel_example::api::{echo, hello, metrics};
+use actix_otel_example::middleware::tracing::record_trace;
 use actix_otel_example::telemetry::{build_metrics_provider, init_subscriber};
 use actix_otel_example::AppContext;
-use actix_web::middleware::Logger;
+use actix_web::middleware::{from_fn, Logger};
 use actix_web::{web, App, HttpServer};
 use actix_web_opentelemetry::{RequestMetrics, RequestTracing};
 use opentelemetry::global;
@@ -18,8 +19,9 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .app_data(web::Data::new(AppContext::new(meter.clone())))
             // .wrap(Logger::default())
-            .wrap(RequestTracing::new())
-            .wrap(RequestMetrics::default())
+            // .wrap(RequestTracing::new())
+            // .wrap(RequestMetrics::default())
+            .wrap(from_fn(record_trace))
             .service(hello)
             .service(echo)
             .service(metrics)
