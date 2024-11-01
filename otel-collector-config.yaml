@@ -1,0 +1,45 @@
+# This is a configuration file for the OpenTelemetry Collector intended to be
+# used in conjunction with the opentelemetry-otlp example.
+#
+# For more information about the OpenTelemetry Collector see:
+#   https://github.com/open-telemetry/opentelemetry-collector
+#
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  # TODO: attributes, memory_limiter
+  batch:
+
+exporters:
+  logging:
+    verbosity: detailed
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+  jaeger:
+    endpoint: "jaeger:14250"
+    tls:
+      insecure: true
+  otlp/elastic:
+    endpoint: "apm-server:8200"
+    tls:
+      ca_file: /usr/share/otel/config/certs/ca/ca.crt
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [logging, jaeger, otlp/elastic]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [logging, prometheus, otlp/elastic]
+    logs:
+      receivers: [otlp]
+      exporters: [logging, otlp/elastic]
