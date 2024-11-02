@@ -5,6 +5,7 @@
     - [ ] add tests
 - [x] docker containers to run in local
 - [ ] switch to datadog and see how it works
+- [ ] set arbitrary trace_id by using propagator
 
 ## Ref
 - https://blog.ymgyt.io/entry/starting_opentelemetry_with_rust/#metrics

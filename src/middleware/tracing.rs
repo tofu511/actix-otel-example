@@ -3,13 +3,33 @@ use actix_web::dev::{ServiceRequest, ServiceResponse};
 use actix_web::http::header::{HeaderMap, HeaderName};
 use actix_web::middleware::Next;
 use actix_web::{Error, HttpMessage, HttpRequest};
+use opentelemetry::propagation::{Extractor, TextMapPropagator};
+use opentelemetry::trace::{FutureExt, TraceContextExt, TraceId};
+use opentelemetry::Context;
+use opentelemetry_sdk::propagation::TraceContextPropagator;
 use opentelemetry_semantic_conventions::trace::{
-    CLIENT_ADDRESS, EXCEPTION_ESCAPED, EXCEPTION_MESSAGE, EXCEPTION_STACKTRACE, EXCEPTION_TYPE,
-    HTTP_REQUEST_METHOD, HTTP_RESPONSE_STATUS_CODE, HTTP_ROUTE, NETWORK_PROTOCOL_VERSION, URL_PATH,
-    USER_AGENT_ORIGINAL,
+    CLIENT_ADDRESS, ERROR_TYPE, EXCEPTION_ESCAPED, EXCEPTION_MESSAGE, EXCEPTION_STACKTRACE,
+    EXCEPTION_TYPE, HTTP_REQUEST_METHOD, HTTP_RESPONSE_STATUS_CODE, HTTP_ROUTE,
+    NETWORK_PROTOCOL_VERSION, URL_PATH, USER_AGENT_ORIGINAL,
 };
+use std::any::Any;
 use tracing::{field, Span};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
+
+#[derive(Clone, Debug)]
+pub struct TraceInfo {
+    pub trace_id: TraceId,
+    pub app_root_span: Span,
+}
+
+impl TraceInfo {
+    pub fn new(trace_id: TraceId, app_root_span: Span) -> Self {
+        Self {
+            trace_id,
+            app_root_span,
+        }
+    }
+}
 
 struct HeaderExtractor<'a>(&'a HeaderMap);
 
@@ -41,7 +61,7 @@ fn make_span(req: &ServiceRequest) -> Span {
         { NETWORK_PROTOCOL_VERSION } = empty,
         { CLIENT_ADDRESS } = empty,
         { USER_AGENT_ORIGINAL } = empty,
-        "error.type" = empty,
+        { ERROR_TYPE } = empty,
     );
     span.set_parent(opentelemetry::global::get_text_map_propagator(
         |propagator| propagator.extract(&HeaderExtractor(req.headers())),
@@ -54,7 +74,11 @@ pub async fn record_trace(
     next: Next<impl MessageBody>,
 ) -> Result<ServiceResponse<impl MessageBody>, Error> {
     let span = make_span(&req);
-    req.extensions_mut().insert(span.clone());
+    let trace_info = TraceInfo::new(
+        span.context().span().span_context().trace_id(),
+        span.clone(),
+    );
+    req.extensions_mut().insert(trace_info);
     let resp = next.call(req).await?;
     let (req, res) = resp.into_parts();
 
@@ -74,7 +98,7 @@ pub async fn record_trace(
 
     span.record(HTTP_RESPONSE_STATUS_CODE, field::display(res.status()));
     if !res.status().is_success() {
-        span.record("error.type", field::display(res.status()));
+        span.record(ERROR_TYPE, field::display(res.status()));
     }
 
     let res = ServiceResponse::new(req, res);

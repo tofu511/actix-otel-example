@@ -1,3 +1,4 @@
+use crate::middleware::tracing::TraceInfo;
 use crate::AppContext;
 use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder};
 use opentelemetry::KeyValue;
@@ -5,18 +6,22 @@ use opentelemetry_semantic_conventions::attribute::HTTP_REQUEST_METHOD;
 use tracing::{instrument, Span};
 
 #[get("/")]
-pub async fn hello(span: web::ReqData<Span>) -> impl Responder {
-    foo(span.into_inner()).await;
+pub async fn hello(trace_info: web::ReqData<TraceInfo>) -> impl Responder {
+    foo(trace_info.into_inner()).await;
     HttpResponse::Ok().body("Hello world!")
 }
 
 #[post("/echo")]
-pub async fn echo(req: HttpRequest, req_body: String, span: web::ReqData<Span>) -> impl Responder {
+pub async fn echo(
+    req: HttpRequest,
+    req_body: String,
+    trace_info: web::ReqData<TraceInfo>,
+) -> impl Responder {
     tracing::event!(
         tracing::Level::INFO,
         { HTTP_REQUEST_METHOD } = req.method().as_str(),
     );
-    foo(span.into_inner()).await;
+    foo(trace_info.into_inner()).await;
     HttpResponse::Ok().body(req_body)
 }
 
@@ -27,7 +32,7 @@ pub async fn metrics(context: web::Data<AppContext>) -> impl Responder {
     HttpResponse::Ok()
 }
 
-#[instrument(parent = _span.clone())]
-async fn foo(_span: Span) {
+#[instrument(parent = _trace_info.parent_span.clone())]
+async fn foo(_trace_info: TraceInfo) {
     tracing::info_span!("this is inside the foo func");
 }
