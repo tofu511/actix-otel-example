@@ -1,11 +1,10 @@
-use actix_otel_example::api::{echo, hello, metrics};
+use actix_otel_example::api::{echo, hello, metrics, random};
 use actix_otel_example::middleware::metrics::HttpMetrics;
 use actix_otel_example::middleware::tracing::record_trace;
 use actix_otel_example::telemetry::{build_metrics_provider, init_subscriber};
 use actix_otel_example::AppContext;
 use actix_web::middleware::{from_fn, Logger};
 use actix_web::{web, App, HttpServer};
-use actix_web_opentelemetry::{RequestMetrics, RequestTracing};
 use opentelemetry::global;
 use opentelemetry::global::shutdown_tracer_provider;
 use std::sync::Arc;
@@ -26,6 +25,7 @@ async fn main() -> std::io::Result<()> {
             .service(hello)
             .service(echo)
             .service(metrics)
+            .service(random)
     })
     .bind(("127.0.0.1", 8080))?
     .run()

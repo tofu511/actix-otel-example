@@ -12,6 +12,7 @@ use opentelemetry_semantic_conventions::trace::{
 };
 use std::sync::Arc;
 use std::time::SystemTime;
+use tracing::info;
 
 const HTTP_SERVER_DURATION: &str = "http.server.duration";
 const HTTP_SERVER_ACTIVE_REQUESTS: &str = "http.server.active_requests";

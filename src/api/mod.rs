@@ -3,12 +3,23 @@ use crate::AppContext;
 use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder};
 use opentelemetry::KeyValue;
 use opentelemetry_semantic_conventions::attribute::HTTP_REQUEST_METHOD;
+use rand::Rng;
+use serde_json::json;
+use std::time::Duration;
 use tracing::{instrument, Span};
 
 #[get("/")]
 pub async fn hello(trace_info: web::ReqData<TraceInfo>) -> impl Responder {
     foo(trace_info.into_inner()).await;
     HttpResponse::Ok().body("Hello world!")
+}
+
+#[get("/random")]
+pub async fn random(trace_info: web::ReqData<TraceInfo>) -> impl Responder {
+    foo(trace_info.into_inner()).await;
+    let duration = rand::thread_rng().gen_range((1..5));
+    tokio::time::sleep(Duration::from_secs(duration)).await;
+    HttpResponse::Ok().json(json!({"duration": duration}))
 }
 
 #[post("/echo")]
