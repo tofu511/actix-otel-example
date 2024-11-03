@@ -5,6 +5,7 @@ use opentelemetry_otlp::{ExportConfig, WithExportConfig};
 use opentelemetry_sdk::metrics::SdkMeterProvider;
 use opentelemetry_sdk::trace::{RandomIdGenerator, Tracer, TracerProvider};
 use opentelemetry_sdk::Resource;
+use tracing::level_filters::LevelFilter;
 use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -79,7 +80,7 @@ pub fn init_subscriber() {
                 .with_span_events(FmtSpan::NEW | FmtSpan::EXIT)
                 .compact(),
         )
-        .with(tracing_subscriber::filter::LevelFilter::DEBUG)
+        .with(tracing_subscriber::filter::LevelFilter::INFO)
         // .with(stdout_layer)
         .with(trace_layer)
         .init();

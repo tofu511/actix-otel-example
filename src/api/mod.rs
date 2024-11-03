@@ -32,7 +32,7 @@ pub async fn metrics(context: web::Data<AppContext>) -> impl Responder {
     HttpResponse::Ok()
 }
 
-#[instrument(parent = _trace_info.parent_span.clone())]
+#[instrument(parent = _trace_info.app_root_span.clone())]
 async fn foo(_trace_info: TraceInfo) {
     tracing::info_span!("this is inside the foo func");
 }

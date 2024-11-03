@@ -70,7 +70,7 @@ fn make_span(req: &ServiceRequest) -> Span {
 }
 
 pub async fn record_trace(
-    mut req: ServiceRequest,
+    req: ServiceRequest,
     next: Next<impl MessageBody>,
 ) -> Result<ServiceResponse<impl MessageBody>, Error> {
     let span = make_span(&req);
