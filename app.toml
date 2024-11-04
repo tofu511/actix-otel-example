@@ -1,0 +1,2 @@
+[otel_config]
+endpoint = "http://localhost:4317"

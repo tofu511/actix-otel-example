@@ -1,4 +1,5 @@
 use opentelemetry::metrics::Meter;
+use serde::Deserialize;
 use std::sync::Arc;
 
 pub mod api;
@@ -14,4 +15,14 @@ impl AppContext {
     pub fn new(meter: Arc<Meter>) -> Self {
         Self { meter }
     }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AppConfig {
+    pub otel_config: OtelConfig,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct OtelConfig {
+    pub endpoint: String,
 }

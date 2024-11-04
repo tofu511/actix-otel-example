@@ -2,17 +2,22 @@ use actix_otel_example::api::{echo, hello, metrics, random};
 use actix_otel_example::middleware::metrics::HttpMetrics;
 use actix_otel_example::middleware::tracing::record_trace;
 use actix_otel_example::telemetry::{build_metrics_provider, init_subscriber};
-use actix_otel_example::AppContext;
+use actix_otel_example::{AppConfig, AppContext};
 use actix_web::middleware::{from_fn, Logger};
 use actix_web::{web, App, HttpServer};
 use opentelemetry::global;
 use opentelemetry::global::shutdown_tracer_provider;
+use std::fs;
 use std::sync::Arc;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    init_subscriber();
-    let meter_provider = build_metrics_provider();
+    let app_config = fs::read_to_string("app.toml")
+        .map(|value| toml::from_str::<AppConfig>(&value).expect("failed to parse app.toml"))
+        .expect("failed to read app.toml");
+
+    init_subscriber(&app_config.otel_config);
+    let meter_provider = build_metrics_provider(&app_config.otel_config);
     global::set_meter_provider(meter_provider.clone());
     let meter = Arc::new(global::meter("rust-telemetry-example"));
 
