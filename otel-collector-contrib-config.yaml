@@ -1,9 +1,3 @@
-# This is a configuration file for the OpenTelemetry Collector intended to be
-# used in conjunction with the opentelemetry-otlp example.
-#
-# For more information about the OpenTelemetry Collector see:
-#   https://github.com/open-telemetry/opentelemetry-collector
-#
 receivers:
   otlp:
     protocols:
@@ -16,30 +10,27 @@ processors:
   # TODO: attributes, memory_limiter
   batch:
 
+connectors:
+  datadog/connector:
+
 exporters:
-  logging:
+  debug:
     verbosity: detailed
-  prometheus:
-    endpoint: "0.0.0.0:8889"
-  jaeger:
-    endpoint: "jaeger:14250"
-    tls:
-      insecure: true
-  otlp/elastic:
-    endpoint: "apm-server:8200"
-    tls:
-      ca_file: /usr/share/otel/config/certs/ca/ca.crt
+  datadog:
+    api:
+      site: datadoghq.com
+      key: ${env:DD_API_KEY}
 
 service:
   pipelines:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [logging, jaeger, otlp/elastic]
+      exporters: [debug, datadog, datadog/connector]
     metrics:
-      receivers: [otlp]
+      receivers: [otlp, datadog/connector]
       processors: [batch]
-      exporters: [logging, prometheus, otlp/elastic]
+      exporters: [debug, datadog]
     logs:
       receivers: [otlp]
-      exporters: [logging]
+      exporters: [debug, datadog]

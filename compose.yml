@@ -11,6 +11,20 @@ services:
     depends_on:
       elasticsearch:
         condition: service_healthy
+#  otel-collector-contrib:
+#    image: otel/opentelemetry-collector-contrib:0.112.0
+#    command: [ "--config=/etc/otel-collector-contrib-config.yaml", "${OTELCOL_ARGS}" ]
+#    volumes:
+#      - ./otel-collector-contrib-config.yaml:/etc/otel-collector-contrib-config.yaml
+#      - certs:/usr/share/otel/config/certs
+#    ports:
+#      - "4317:4317"
+#    environment:
+#      DD_API_KEY: '${DD_API_KEY}'
+#    depends_on:
+#      elasticsearch:
+#        condition: service_healthy
+
   prometheus:
     image: prom/prometheus:v2.40.5
     command: ["--config.file=/etc/prometheus/prometheus.yaml"]
@@ -18,19 +32,13 @@ services:
       - ./prometheus.yaml:/etc/prometheus/prometheus.yaml
     ports:
       - "9090:9090"
+
   jaeger:
     image: jaegertracing/all-in-one:1.40.0
     container_name: jaeger
     ports:
       - 16686:16686 # UI
-#      - 4317:4317
-#      - 4318:4318
-#      - 9411:9411
-#    environment:
-#      COLLECTOR_ZIPKIN_HOST_PORT: ":9411"
-#      COLLECTOR_OTLP_ENABLED: true
-#      METRICS_STORAGE_TYPE: prometheus
-#      PROMETHEUS_SERVER_URL: prometheus:9090
+
   setup_elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.5.2
     volumes:
@@ -92,6 +100,7 @@ services:
       setup_elasticsearch:
         condition: service_healthy
     image: docker.elastic.co/elasticsearch/elasticsearch:8.5.2
+    container_name: elasticsearch
     volumes:
       - certs:/usr/share/elasticsearch/config/certs
     ports:
