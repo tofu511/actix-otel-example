@@ -3,11 +3,12 @@ use once_cell::sync::Lazy;
 use opentelemetry::trace::TracerProvider as _;
 use opentelemetry::{global, KeyValue};
 use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
+use opentelemetry_datadog::ApiVersion;
 use opentelemetry_otlp::{ExportConfig, WithExportConfig};
 use opentelemetry_sdk::logs::LoggerProvider;
 use opentelemetry_sdk::metrics::SdkMeterProvider;
 use opentelemetry_sdk::trace::{RandomIdGenerator, Tracer, TracerProvider};
-use opentelemetry_sdk::Resource;
+use opentelemetry_sdk::{trace, Resource};
 use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -15,7 +16,7 @@ use tracing_subscriber::util::SubscriberInitExt;
 static RESOURCE: Lazy<Resource> = Lazy::new(|| {
     Resource::new(vec![KeyValue::new(
         opentelemetry_semantic_conventions::resource::SERVICE_NAME,
-        "rust-telemetry-example",
+        "rust-open-telemetry-example",
     )])
 });
 
@@ -45,6 +46,19 @@ fn init_tracer(otel_config: &OtelConfig) -> Tracer {
         .inspect_err(|e| println!("{:#?}", e))
         .unwrap()
         .tracer("sample_tracer")
+}
+
+fn init_datadog_tracer() -> Tracer {
+    opentelemetry_datadog::new_pipeline()
+        .with_api_version(ApiVersion::Version05)
+        .with_agent_endpoint("http://localhost:8126")
+        .with_trace_config(
+            trace::Config::default()
+                .with_resource(RESOURCE.clone())
+                .with_id_generator(RandomIdGenerator::default()),
+        )
+        .install_batch(opentelemetry_sdk::runtime::Tokio)
+        .expect("failed to init datadog tracer")
 }
 
 pub fn build_metrics_provider(otel_config: &OtelConfig) -> SdkMeterProvider {
@@ -82,10 +96,14 @@ fn init_logs(otel_config: &OtelConfig) -> LoggerProvider {
 pub fn init_subscriber(otel_config: &OtelConfig) {
     // let std_tracer = init_stdout_tracer();
     // let stdout_layer = tracing_opentelemetry::layer().with_tracer(std_tracer);
+
     let tracer = init_tracer(otel_config);
     let trace_layer = tracing_opentelemetry::layer().with_tracer(tracer);
     let logger = init_logs(otel_config);
     let logger_layer = OpenTelemetryTracingBridge::new(&logger);
+
+    // let dd_tracer = init_datadog_tracer();
+    // let dd_layer = tracing_opentelemetry::layer().with_tracer(dd_tracer);
 
     tracing_subscriber::registry()
         .with(
@@ -98,5 +116,6 @@ pub fn init_subscriber(otel_config: &OtelConfig) {
         // .with(stdout_layer)
         .with(trace_layer)
         .with(logger_layer)
+        // .with(dd_layer)
         .init();
 }

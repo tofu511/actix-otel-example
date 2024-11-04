@@ -173,6 +173,20 @@ services:
       interval: 10s
       retries: 12
       test: curl --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null http://localhost:8200/
+
+  datadog:
+      image: datadog/docker-dd-agent
+      container_name: dd-agent
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock:ro
+        - /proc/:/host/proc:ro
+        - /sys/fs/cgroup:/host/sys/fs/cgroup:ro
+      environment:
+        DD_API_KEY: '${DD_API_KEY}'
+        DD_SITE: '${DD_SITE}'
+        DD_APM_ENABLED: true
+      env_file:
+        - .env
 volumes:
   certs:
     driver: local
