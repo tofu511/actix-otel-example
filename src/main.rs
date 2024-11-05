@@ -1,4 +1,4 @@
-use actix_otel_example::api::{echo, hello, metrics, random};
+use actix_otel_example::api::route;
 use actix_otel_example::middleware::metrics::HttpMetrics;
 use actix_otel_example::middleware::tracing::record_trace;
 use actix_otel_example::telemetry::{build_metrics_provider, init_subscriber};
@@ -27,10 +27,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .wrap(from_fn(record_trace))
             .wrap(HttpMetrics::new(meter.clone()))
-            .service(hello)
-            .service(echo)
-            .service(metrics)
-            .service(random)
+            .configure(route)
     })
     .bind(("127.0.0.1", 8080))?
     .run()

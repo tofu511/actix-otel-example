@@ -19,7 +19,7 @@ pub async fn hello(trace_info: web::ReqData<TraceInfo>) -> impl Responder {
 #[get("/random")]
 pub async fn random(trace_info: web::ReqData<TraceInfo>) -> impl Responder {
     foo(trace_info.into_inner()).await;
-    let duration = rand::thread_rng().gen_range((1..5));
+    let duration = rand::thread_rng().gen_range(1..5);
     tokio::time::sleep(Duration::from_secs(duration)).await;
     info!("took {} seconds", duration);
     HttpResponse::Ok().json(json!({"duration": duration}))
@@ -44,6 +44,16 @@ pub async fn metrics(context: web::Data<AppContext>) -> impl Responder {
     let counter = context.meter.f64_counter("ops_count").init();
     counter.add(1.0, &[KeyValue::new("my-key", "my-value")]);
     HttpResponse::Ok()
+}
+
+pub fn route(cfg: &mut web::ServiceConfig) {
+    cfg.service(
+        web::scope("")
+            .service(hello)
+            .service(echo)
+            .service(metrics)
+            .service(random),
+    );
 }
 
 #[instrument(parent = _trace_info.app_root_span.clone())]

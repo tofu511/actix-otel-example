@@ -105,3 +105,36 @@ pub async fn record_trace(
 
     Ok(res)
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::api::route;
+    use crate::middleware::tracing::record_trace;
+    use actix_web::middleware::from_fn;
+    use actix_web::{test, App};
+    use opentelemetry::trace::TracerProvider as _;
+    use opentelemetry_sdk::testing::trace::InMemorySpanExporter;
+    use opentelemetry_sdk::trace::TracerProvider;
+    use tracing_subscriber::layer::SubscriberExt;
+    use tracing_subscriber::util::SubscriberInitExt;
+
+    #[tokio::test]
+    async fn test_tracing() {
+        let exporter = InMemorySpanExporter::default();
+        let provider = TracerProvider::builder()
+            .with_simple_exporter(exporter.clone())
+            .build();
+
+        let tracer = provider.clone().tracer("test_tracer");
+        let trace_layer = tracing_opentelemetry::layer().with_tracer(tracer);
+        tracing_subscriber::registry().with(trace_layer).init();
+
+        let app = test::init_service(App::new().wrap(from_fn(record_trace)).configure(route)).await;
+        let req = test::TestRequest::get().uri("/").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(), 200);
+
+        let spans = exporter.get_finished_spans().unwrap();
+        assert_eq!(spans.len(), 2);
+    }
+}

@@ -1,8 +1,6 @@
 use actix_web::body::{BodySize, MessageBody};
-use actix_web::dev::{ServiceRequest, ServiceResponse};
+use actix_web::dev::{self, ServiceRequest, ServiceResponse};
 use actix_web::http::header::CONTENT_LENGTH;
-use actix_web::middleware::Next;
-use actix_web::{dev, Error, HttpRequest};
 use futures_util::future;
 use futures_util::future::LocalBoxFuture;
 use opentelemetry::metrics::{Histogram, Meter, UpDownCounter};
@@ -12,7 +10,6 @@ use opentelemetry_semantic_conventions::trace::{
 };
 use std::sync::Arc;
 use std::time::SystemTime;
-use tracing::info;
 
 const HTTP_SERVER_DURATION: &str = "http.server.duration";
 const HTTP_SERVER_ACTIVE_REQUESTS: &str = "http.server.active_requests";
@@ -181,5 +178,63 @@ where
 
             Ok(ServiceResponse::new(req, res))
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::api::route;
+    use crate::middleware::tracing::record_trace;
+    use crate::AppContext;
+    use actix_web::middleware::from_fn;
+    use actix_web::{test, web, App};
+    use opentelemetry::metrics::MeterProvider;
+    use opentelemetry_sdk::metrics::{PeriodicReader, SdkMeterProvider};
+    use opentelemetry_sdk::testing::metrics::InMemoryMetricsExporter;
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn test_http_metrics() {
+        let exporter = InMemoryMetricsExporter::default();
+        let meter_provider = SdkMeterProvider::builder()
+            .with_reader(
+                PeriodicReader::builder(
+                    exporter.clone(),
+                    opentelemetry_sdk::runtime::TokioCurrentThread,
+                ) // runtime::Tokio has an issue to hang
+                .build(),
+            )
+            .build();
+        let meter = Arc::new(meter_provider.meter("test"));
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(AppContext::new(meter.clone())))
+                .wrap(from_fn(record_trace))
+                .wrap(HttpMetrics::new(meter.clone()))
+                .configure(route),
+        )
+        .await;
+        let req = test::TestRequest::get().uri("/").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(), 200);
+
+        meter_provider.force_flush().unwrap();
+
+        let finished_metrics = exporter.get_finished_metrics().unwrap();
+        let finished_metrics_name = finished_metrics
+            .iter()
+            .flat_map(|resource_metrics| {
+                resource_metrics
+                    .scope_metrics
+                    .iter()
+                    .flat_map(|scope_metrics| scope_metrics.metrics.iter().map(|m| m.name.as_ref()))
+            })
+            .collect::<Vec<_>>();
+
+        assert!(finished_metrics_name.contains(&HTTP_SERVER_ACTIVE_REQUESTS));
+        assert!(finished_metrics_name.contains(&HTTP_SERVER_DURATION));
+        assert!(finished_metrics_name.contains(&HTTP_SERVER_REQUEST_SIZE));
+        assert!(finished_metrics_name.contains(&HTTP_SERVER_RESPONSE_SIZE));
     }
 }

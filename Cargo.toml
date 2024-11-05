@@ -18,7 +18,7 @@ tracing-panic = "0.1"
 tracing-subscriber = { version = "0.3", default-features = false }
 opentelemetry = { version = "0.26.0", features = ["metrics", "trace"] }
 opentelemetry-otlp = { version = "0.26.0", features = ["tls", "metrics", "trace"] }
-opentelemetry_sdk = { version = "0.26.0", features = ["rt-tokio", "metrics", "trace"] }
+opentelemetry_sdk = { version = "0.26.0", features = ["rt-tokio", "metrics", "trace", "testing"] }
 opentelemetry-stdout = "0.26.0"
 opentelemetry-semantic-conventions = "0.26.0"
 opentelemetry-appender-tracing = "0.26.0"
