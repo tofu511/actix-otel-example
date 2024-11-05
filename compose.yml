@@ -8,6 +8,8 @@ services:
       - certs:/usr/share/otel/config/certs
     ports:
       - "4317:4317"
+    env_file:
+      - .env
     depends_on:
       elasticsearch:
         condition: service_healthy

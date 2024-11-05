@@ -29,17 +29,26 @@ exporters:
     endpoint: "apm-server:8200"
     tls:
       ca_file: /usr/share/otel/config/certs/ca/ca.crt
+  otlp/honeycomb:
+    endpoint: "api.honeycomb.io:443"
+    headers:
+      "x-honeycomb-team": ${env:HONEYCOMB_API_KEY}
+  otlp/honeycomb/metrics:
+    endpoint: "api.honeycomb.io:443"
+    headers:
+      "x-honeycomb-team": ${env:HONEYCOMB_API_KEY}
+      "x-honeycomb-dataset": ${env:HONEYCOMB_METRICS_DATASET}
 
 service:
   pipelines:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [logging, jaeger, otlp/elastic]
+      exporters: [logging, jaeger, otlp/elastic, otlp/honeycomb]
     metrics:
       receivers: [otlp]
       processors: [batch]
-      exporters: [logging, prometheus, otlp/elastic]
+      exporters: [logging, prometheus, otlp/elastic, otlp/honeycomb/metrics]
     logs:
       receivers: [otlp]
-      exporters: [logging, otlp/elastic]
+      exporters: [logging, otlp/elastic, otlp/honeycomb]
