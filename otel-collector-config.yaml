@@ -52,11 +52,11 @@ service:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [logging, jaeger, otlp/elastic, otlp/openobserve]
+      exporters: [logging, jaeger, otlp/elastic, otlp/honeycomb, otlp/openobserve]
     metrics:
       receivers: [otlp]
       processors: [batch]
-      exporters: [logging, prometheus, otlp/elastic, otlp/openobserve]
+      exporters: [logging, prometheus, otlp/elastic, otlp/honeycomb/metrics, otlp/openobserve]
     logs:
       receivers: [otlp]
-      exporters: [logging, otlp/elastic, otlp/openobserve]
+      exporters: [logging, otlp/elastic, otlp/honeycomb, otlp/openobserve]
