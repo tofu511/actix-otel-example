@@ -13,7 +13,8 @@ use std::sync::Arc;
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let app_config = fs::read_to_string("app.toml")
-        .map(|value| toml::from_str::<AppConfig>(&value).expect("failed to parse app.toml"))
+        .ok()
+        .and_then(|value| toml::from_str::<AppConfig>(&value).ok())
         .expect("failed to read app.toml");
 
     init_subscriber(&app_config.otel_config);
