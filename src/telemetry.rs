@@ -119,3 +119,39 @@ pub fn init_subscriber(otel_config: &OtelConfig) {
         // .with(dd_layer)
         .init();
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::api::route;
+    use crate::middleware::tracing::record_trace;
+    use actix_web::middleware::from_fn;
+    use actix_web::{test, App};
+    use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
+    use opentelemetry_sdk::logs::LoggerProvider;
+    use opentelemetry_sdk::testing::logs::InMemoryLogsExporter;
+    use tracing_subscriber::layer::SubscriberExt;
+    use tracing_subscriber::util::SubscriberInitExt;
+
+    #[tokio::test]
+    async fn test_log() {
+        let exporter = InMemoryLogsExporter::default();
+        let logger_provider = LoggerProvider::builder()
+            .with_simple_exporter(exporter.clone())
+            .build();
+        let logger_layer = OpenTelemetryTracingBridge::new(&logger_provider);
+        let _guard = tracing_subscriber::registry()
+            .with(logger_layer)
+            .set_default();
+
+        let app = test::init_service(App::new().wrap(from_fn(record_trace)).configure(route)).await;
+        let req = test::TestRequest::get().uri("/random").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(), 200);
+
+        logger_provider.force_flush();
+        let emitted_logs = exporter.get_emitted_logs().unwrap();
+        for log in emitted_logs {
+            println!("{:?}", log);
+        }
+    }
+}

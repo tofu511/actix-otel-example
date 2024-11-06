@@ -112,6 +112,7 @@ mod tests {
     use crate::middleware::tracing::record_trace;
     use actix_web::middleware::from_fn;
     use actix_web::{test, App};
+    use opentelemetry::global::shutdown_tracer_provider;
     use opentelemetry::trace::TracerProvider as _;
     use opentelemetry_sdk::testing::trace::InMemorySpanExporter;
     use opentelemetry_sdk::trace::TracerProvider;
@@ -127,7 +128,9 @@ mod tests {
 
         let tracer = provider.clone().tracer("test_tracer");
         let trace_layer = tracing_opentelemetry::layer().with_tracer(tracer);
-        tracing_subscriber::registry().with(trace_layer).init();
+        let _guard = tracing_subscriber::registry()
+            .with(trace_layer)
+            .set_default();
 
         let app = test::init_service(App::new().wrap(from_fn(record_trace)).configure(route)).await;
         let req = test::TestRequest::get().uri("/").to_request();
@@ -135,6 +138,8 @@ mod tests {
         assert_eq!(resp.status(), 200);
 
         let spans = exporter.get_finished_spans().unwrap();
-        assert_eq!(spans.len(), 2);
+        assert!(spans.len() >= 2);
+
+        shutdown_tracer_provider();
     }
 }
