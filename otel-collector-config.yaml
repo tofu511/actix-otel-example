@@ -38,17 +38,25 @@ exporters:
     headers:
       "x-honeycomb-team": ${env:HONEYCOMB_API_KEY}
       "x-honeycomb-dataset": ${env:HONEYCOMB_METRICS_DATASET}
+  otlp/openobserve:
+    endpoint: "open-observe:5081"
+    headers:
+      Authorization: ${env:OPEN_OBSERVE_AUTH}
+      organization: "myorg"
+      stream-name: "myindex"
+    tls:
+      insecure: true
 
 service:
   pipelines:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [logging, jaeger, otlp/elastic, otlp/honeycomb]
+      exporters: [logging, jaeger, otlp/elastic, otlp/openobserve]
     metrics:
       receivers: [otlp]
       processors: [batch]
-      exporters: [logging, prometheus, otlp/elastic, otlp/honeycomb/metrics]
+      exporters: [logging, prometheus, otlp/elastic, otlp/openobserve]
     logs:
       receivers: [otlp]
-      exporters: [logging, otlp/elastic, otlp/honeycomb]
+      exporters: [logging, otlp/elastic, otlp/openobserve]

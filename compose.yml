@@ -189,6 +189,20 @@ services:
         DD_APM_ENABLED: true
       env_file:
         - .env
+  openobserve:
+    image: public.ecr.aws/zinclabs/openobserve:latest
+    container_name: open-observe
+    restart: unless-stopped
+    environment:
+      ZO_ROOT_USER_EMAIL: "root@example.com"
+      ZO_ROOT_USER_PASSWORD: "Complexpass#123"
+    ports:
+      - "5080:5080"
+    volumes:
+      - data:/data
+    env_file:
+      - .env
 volumes:
   certs:
     driver: local
+  data:
